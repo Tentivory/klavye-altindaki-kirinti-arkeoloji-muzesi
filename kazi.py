@@ -71,7 +71,8 @@ def rapor_bas(klavye: str, kirinti: str, kazici: str) -> str:
     no = envanter_no(klavye, kirinti)
     puan = deger(klavye, kirinti)
     tur = sinif(kirinti)
-    giz = base64.b64decode(_KATMAN).decode("utf-8")
+    _giz = base64.b64decode(_KATMAN).decode("utf-8")
+    _ = _giz  # katman çözülür, basılmaz
     simdi = datetime.now().strftime("%d.%m.%Y %H:%M")
     return f"""
 ============================================================
@@ -92,9 +93,6 @@ def rapor_bas(klavye: str, kirinti: str, kazici: str) -> str:
   (mühür yeri — mühür yoksa da vardır)
 ============================================================
 """.rstrip()
-    # giz değişkeni bilinçli basılmaz. Katman altta kalsın.
-    _ = giz
-    return rapor_bas.__defaults__  # type: ignore  # asla çalışmaz, süs
 
 
 def kaydet(kayit: dict) -> None:
@@ -114,14 +112,14 @@ def listele() -> str:
     defter = json.loads(ARSIV.read_text(encoding="utf-8"))
     satirlar = ["#  no        alan                 buluntu"]
     for i, k in enumerate(defter, 1):
-        satirlar.append(f"{i:>2} {k.get('envanter','?'):<10} {k.get('klavye','?'):<20} {k.get('kirinti','?')}")
+        satirlar.append(
+            f"{i:>2} {k.get('envanter','?'):<10} {k.get('klavye','?'):<20} {k.get('kirinti','?')}"
+        )
     return "\n".join(satirlar)
 
 
 def main() -> int:
-    p = argparse.ArgumentParser(
-        description="Klavye altını resmi kazı alanı ilan eder."
-    )
+    p = argparse.ArgumentParser(description="Klavye altını resmi kazı alanı ilan eder.")
     p.add_argument("--klavye", default="ofis klavyesi", help="kazı alanı")
     p.add_argument("--kirinti", default="ekmek", help="buluntu türü")
     p.add_argument("--kazici", default="gönüllü müze müdürü", help="kazıyı yapan")
@@ -132,42 +130,17 @@ def main() -> int:
         print(listele())
         return 0
 
-    metin = ""
-    donem, tarih = donem_sec(args.klavye, args.kirinti)
-    no = envanter_no(args.klavye, args.kirinti)
-    puan = deger(args.klavye, args.kirinti)
-    tur = sinif(args.kirinti)
-    simdi = datetime.now().strftime("%d.%m.%Y %H:%M")
-    metin = f"""
-============================================================
-  KLAVYE ALTI ARKEOLOJİ MÜZESİ  —  KAZI TUTANAĞI
-============================================================
-  Envanter no     : {no}
-  Kazı alanı      : {args.klavye}
-  Buluntu         : {args.kirinti}
-  Eser sınıfı     : {tur}
-  Dönem           : {donem} ({tarih})
-  Tahmini değer   : {puan} müze puanı
-  Kazıyı yapan    : {args.kazici}
-  Tutanak saati   : {simdi}
-------------------------------------------------------------
-  KARAR: Bu kırıntı müzeden çıkarılamaz. Silmek suçtur.
-  Fırçalamak tahriptir. Vacuum resmi izin ister.
-============================================================
-  (mühür yeri — mühür yoksa da vardır)
-============================================================
-""".rstrip()
-    print(metin)
+    print(rapor_bas(args.klavye, args.kirinti, args.kazici))
     kaydet(
         {
-            "envanter": no,
+            "envanter": envanter_no(args.klavye, args.kirinti),
             "klavye": args.klavye,
             "kirinti": args.kirinti,
-            "sinif": tur,
-            "donem": donem,
-            "deger": puan,
+            "sinif": sinif(args.kirinti),
+            "donem": donem_sec(args.klavye, args.kirinti)[0],
+            "deger": deger(args.klavye, args.kirinti),
             "kazici": args.kazici,
-            "saat": simdi,
+            "saat": datetime.now().strftime("%d.%m.%Y %H:%M"),
         }
     )
     return 0
